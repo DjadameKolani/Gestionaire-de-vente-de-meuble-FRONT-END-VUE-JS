@@ -1,3 +1,35 @@
+<script setup>
+import { useRouter } from 'vue-router'
+
+function goToCard(produit) {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    // ← pas connecté → sauvegarder le produit et rediriger vers connexion
+    localStorage.setItem('produitEnAttente', JSON.stringify(produit))
+    router.push('/connection')
+    return
+  }
+
+  // ← connecté → ajouter au panier directement
+  ajouterAuPanier(produit)
+  router.push({ name: 'Card' })
+}
+
+function ajouterAuPanier(produit) {
+  const panier = JSON.parse(localStorage.getItem('panier') || '[]')
+  const existant = panier.find((p) => p.id === produit.id)
+
+  if (existant) {
+    existant.quantite += 1
+  } else {
+    panier.push({ ...produit, quantite: 1 })
+  }
+
+  localStorage.setItem('panier', JSON.stringify(panier))
+}
+</script>
+
 <template>
   <div class="hero">
     <div class="container">
@@ -10,8 +42,13 @@
               vulputate velit imperdiet dolor tempor tristique.
             </p>
             <p>
-              <a href="#" class="btn btn-secondary me-2">Shop Now</a
-              ><a href="#" class="btn btn-white-outline">Explore</a>
+              <router-link class="btn btn-secondary me-2" :to="{ name: 'Shop' }">
+                Shop Now
+              </router-link>
+
+              <router-link class="btn btn-white-outline" :to="{ name: 'About_US' }">
+                Explore
+              </router-link>
             </p>
           </div>
         </div>
@@ -41,32 +78,50 @@
         <!-- End Column 1 -->
 
         <!-- Start Column 2 -->
+
         <div class="col-12 col-md-4 col-lg-3 mb-5 mb-md-0">
-          <a class="product-item" href="cart.html">
+          <a
+            class="product-item"
+            href="#"
+            @click.prevent="
+              goToCard({
+                id: 1,
+                nom: 'Nordic Chair',
+                prix: 50.0,
+                image: '/assets/images/product-1.png',
+              })
+            "
+          >
             <img src="/assets/images/product-1.png" class="img-fluid product-thumbnail" />
             <h3 class="product-title">Nordic Chair</h3>
             <strong class="product-price">$50.00</strong>
-
             <span class="icon-cross">
               <img src="/assets/images/cross.svg" class="img-fluid" />
             </span>
           </a>
         </div>
-        <!-- End Column 2 -->
 
-        <!-- Start Column 3 -->
         <div class="col-12 col-md-4 col-lg-3 mb-5 mb-md-0">
-          <a class="product-item" href="cart.html">
+          <a
+            class="product-item"
+            href="#"
+            @click.prevent="
+              goToCard({
+                id: 2,
+                nom: 'Kruzo Aero Chair',
+                prix: 78.0,
+                image: '/assets/images/product-2.png',
+              })
+            "
+          >
             <img src="/assets/images/product-2.png" class="img-fluid product-thumbnail" />
             <h3 class="product-title">Kruzo Aero Chair</h3>
             <strong class="product-price">$78.00</strong>
-
             <span class="icon-cross">
               <img src="/assets/images/cross.svg" class="img-fluid" />
             </span>
           </a>
         </div>
-        <!-- End Column 3 -->
 
         <!-- Start Column 4 -->
         <div class="col-12 col-md-4 col-lg-3 mb-5 mb-md-0">
@@ -431,3 +486,31 @@
   </div>
   <!-- End Blog Section -->
 </template>
+<script>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function goToCard(produit) {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    // ← pas connecté → page connexion
+    router.push('/connection')
+    return
+  }
+
+  // ← connecté → sauvegarder le produit et aller au panier
+  const panier = JSON.parse(localStorage.getItem('panier') || '[]')
+  const existant = panier.find((p) => p.id === produit.id)
+
+  if (existant) {
+    existant.quantite += 1
+  } else {
+    panier.push({ ...produit, quantite: 1 })
+  }
+
+  localStorage.setItem('panier', JSON.stringify(panier))
+  router.push({ name: 'Card' })
+}
+</script>

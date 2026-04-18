@@ -75,6 +75,27 @@ export default {
       try {
         await authService.login(this.form)
         const role = localStorage.getItem('role')
+
+        // ← vérifier si un produit est en attente
+        const produitEnAttente = localStorage.getItem('produitEnAttente')
+        if (produitEnAttente) {
+          const produit = JSON.parse(produitEnAttente)
+          const panier = JSON.parse(localStorage.getItem('panier') || '[]')
+          const existant = panier.find((p) => p.id === produit.id)
+
+          if (existant) {
+            existant.quantite += 1
+          } else {
+            panier.push({ ...produit, quantite: 1 })
+          }
+
+          localStorage.setItem('panier', JSON.stringify(panier))
+          localStorage.removeItem('produitEnAttente')
+          this.$router.push({ name: 'Card' })
+          return
+        }
+
+        // ← redirection normale selon le rôle
         if (role === 'ROLE_ADMIN') {
           this.$router.push('/admin')
         } else if (role === 'ROLE_EXPERT') {

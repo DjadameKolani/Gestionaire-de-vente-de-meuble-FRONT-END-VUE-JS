@@ -45,8 +45,15 @@
         <ul
           class="custom-navbar-cta navbar-nav mb-2 mb-md-0 ms-4 d-flex flex-row align-items-center"
         >
-          <!-- User dropdown avec avatar rond -->
-          <li class="nav-item dropdown">
+          <!-- Panier -->
+          <li class="nav-item me-2">
+            <a class="nav-link" href="#" @click.prevent="goToCart">
+              <img src="/assets/images/cart.svg" width="22" height="22" />
+            </a>
+          </li>
+
+          <!-- Si connecté → avatar + dropdown -->
+          <li class="nav-item dropdown" v-if="isLoggedIn">
             <a
               class="nav-link dropdown-toggle d-flex align-items-center gap-2"
               href="#"
@@ -72,10 +79,11 @@
               </li>
             </ul>
           </li>
-          <!-- Panier -->
-          <li class="nav-item me-2">
-            <router-link class="nav-link" :to="{ name: 'Card' }">
-              <img src="/assets/images/cart.svg" width="22" height="22" />
+
+          <!-- Si pas connecté → bouton connexion -->
+          <li class="nav-item" v-else>
+            <router-link class="nav-link" :to="{ name: 'Connection' }">
+              <img src="/assets/images/user.svg" width="22" height="22" />
             </router-link>
           </li>
         </ul>
@@ -90,16 +98,26 @@ import { useRouter } from 'vue-router'
 import { authService } from '@/services/authService'
 
 const router = useRouter()
-const username = ref(localStorage.getItem('username') || 'Utilisateur')
+const token = localStorage.getItem('token')
+const username = ref(localStorage.getItem('username') || '')
+const isLoggedIn = ref(!!token) // ← true si connecté, false sinon
 
-// ← Première lettre en majuscule
 const userInitial = computed(() => {
-  return username.value.charAt(0).toUpperCase()
+  return username.value ? username.value.charAt(0).toUpperCase() : ''
 })
 
 function handleLogout() {
   authService.logout()
+  isLoggedIn.value = false
   router.push('/')
+}
+
+function goToCart() {
+  if (isLoggedIn.value) {
+    router.push({ name: 'Card' })
+  } else {
+    router.push('/connection')
+  }
 }
 </script>
 

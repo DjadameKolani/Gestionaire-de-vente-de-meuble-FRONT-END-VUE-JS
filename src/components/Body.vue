@@ -10,8 +10,13 @@
               vulputate velit imperdiet dolor tempor tristique.
             </p>
             <p>
-              <a href="#" class="btn btn-secondary me-2">Shop Now</a
-              ><a href="#" class="btn btn-white-outline">Explore</a>
+              <router-link class="btn btn-secondary me-2" :to="{ name: 'Shop' }">
+                Shop Now
+              </router-link>
+
+              <router-link class="btn btn-white-outline" :to="{ name: 'About_US' }">
+                Explore
+              </router-link>
             </p>
           </div>
         </div>

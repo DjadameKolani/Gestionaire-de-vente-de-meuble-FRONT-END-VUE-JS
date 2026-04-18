@@ -7,6 +7,7 @@ const routes = [
     name: 'home',
     component: HomeView,
   },
+  //user
 
   // Admin layout
   {
@@ -66,43 +67,44 @@ const routes = [
     meta: { requiresAuth: true, role: 'ROLE_USER' },
     children: [
       {
-        path: '',
-        name: 'User-dashbord',
-        component: () => import('../views/User/UserHomeView.vue'),
-      },
-      {
-        path: 'Utilisateur/Shop',
-        name: 'Shop',
-        component: () => import('../components/Utilisateur/Shop.vue'),
-      },
-      {
-        path: 'Utilisateur/Services',
-        name: 'Services',
-        component: () => import('../components/Utilisateur/Services.vue'),
-      },
-      {
-        path: 'Utilisateur/Contact_US',
-        name: 'Contact_US',
-        component: () => import('../components/Utilisateur/Contact_US.vue'),
-      },
-      {
-        path: 'Utilisateur/About_US',
-        name: 'About_US',
-        component: () => import('../components/Utilisateur/About_US.vue'),
-      },
-      {
         path: 'Utilisateur/Card',
         name: 'Card',
         component: () => import('../components/Utilisateur/Card.vue'),
       },
-      {
-        path: 'Utilisateur/Blog',
-        name: 'Blog',
-        component: () => import('../components/Utilisateur/Blog.vue'),
-      },
     ],
   },
-
+  ////commence///
+  {
+    path: '',
+    name: 'User-dashbord',
+    component: () => import('../views/User/UserHomeView.vue'),
+  },
+  {
+    path: '/Shop',
+    name: 'Shop',
+    component: () => import('../components/Utilisateur/Shop.vue'),
+  },
+  {
+    path: '/Blog',
+    name: 'Blog',
+    component: () => import('../components/Utilisateur/Blog.vue'),
+  },
+  {
+    path: '/Services',
+    name: 'Services',
+    component: () => import('../components/Utilisateur/Services.vue'),
+  },
+  {
+    path: '/Contact_US',
+    name: 'Contact_US',
+    component: () => import('../components/Utilisateur/Contact_US.vue'),
+  },
+  {
+    path: '/About_US',
+    name: 'About_US',
+    component: () => import('../components/Utilisateur/About_US.vue'),
+  },
+  /////r/user dehort
   {
     path: '/inscription',
     name: 'Inscription',
