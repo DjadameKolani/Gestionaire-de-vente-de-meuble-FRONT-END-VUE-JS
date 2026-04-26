@@ -45,7 +45,7 @@ const addProduit = async () => {
     formData.append('quantite', String(produit.value.quantite))
     formData.append('image', image.value)
 
-    const response = await fetch('http://localhost:8080/api/produits', {
+    const response = await fetch('${import.meta.env.VITE_API_URL}/api/produits', {
       method: 'POST',
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: formData,

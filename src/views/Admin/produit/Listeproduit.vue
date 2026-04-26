@@ -20,7 +20,7 @@ const fetchProduits = async () => {
   loading.value = true
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch('http://localhost:8080/api/produits', {
+    const res = await fetch('${import.meta.env.VITE_API_URL}/api/produits', {
       headers: { Authorization: `Bearer ${token}` },
     })
     produits.value = await res.json()
@@ -34,7 +34,7 @@ const fetchProduits = async () => {
 const deleteProduit = async (id: string) => {
   try {
     const token = localStorage.getItem('token')
-    await fetch(`http://localhost:8080/api/produits/${id}`, {
+    await fetch(`${import.meta.env.VITE_API_URL}/api/produits/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     })

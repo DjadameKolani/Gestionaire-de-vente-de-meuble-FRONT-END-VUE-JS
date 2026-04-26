@@ -20,7 +20,7 @@ const fetchUsers = async () => {
   loading.value = true
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch('http://localhost:8080/api/users', {
+    const res = await fetch('${import.meta.env.VITE_API_URL}/api/users', {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) {

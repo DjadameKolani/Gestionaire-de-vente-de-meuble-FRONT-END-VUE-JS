@@ -18,7 +18,7 @@ const fetching = ref(true)
 const fetchProduit = async () => {
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch(`http://localhost:8080/api/produits/${id}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/produits/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) throw new Error()
@@ -68,7 +68,7 @@ const updateProduit = async () => {
     formData.append('quantite', String(produit.value.quantite))
     if (image.value) formData.append('image', image.value)
 
-    const response = await fetch(`http://localhost:8080/api/produits/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/produits/${id}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

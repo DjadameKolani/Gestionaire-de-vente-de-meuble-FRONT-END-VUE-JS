@@ -1,0 +1,7 @@
+# .env.production
+
+VITE_API_URL=https://votre-backend.up.railway.app
+
+# .env.development
+
+VITE_API_URL=http://localhost:8080

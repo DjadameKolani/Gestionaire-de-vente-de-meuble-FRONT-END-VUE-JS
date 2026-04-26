@@ -13,7 +13,7 @@ const fetchUtilisateurs = async () => {
   loading.value = true
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch('http://localhost:8080/api/users', {
+    const res = await fetch('${import.meta.env.VITE_API_URL}/api/users', {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) throw new Error('HTTP ' + res.status)
@@ -47,7 +47,7 @@ const stats = computed(() => ({
 const deleteUser = async (id: string) => {
   try {
     const token = localStorage.getItem('token')
-    await fetch(`http://localhost:8080/api/users/${id}`, {
+    await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     })
