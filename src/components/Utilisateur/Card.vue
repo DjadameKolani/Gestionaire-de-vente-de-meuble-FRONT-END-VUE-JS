@@ -1,173 +1,506 @@
 <script setup>
-import UtilisateurTopbar from '@/components/Utilisateur/UtilisateurTopbar.vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import UtilisateurTopbar from '@/components/Utilisateur/UtilisateurTopbar.vue' // ✅ import manquant
+import { commandeService } from '../../services/commandeService.js'
+import { formatPrix } from '../../utils/formatPrix.js'
+
+const router = useRouter()
+const panier = ref([])
+const loading = ref(false)
+const message = ref('')
+const erreur = ref('')
+
+onMounted(() => {
+  const token = localStorage.getItem('token')
+  if (!token) {
+    router.push('/connection')
+    return
+  }
+  panier.value = JSON.parse(localStorage.getItem('panier') || '[]')
+})
+
+const totalPanier = computed(() => {
+  return panier.value.reduce((total, item) => total + item.prix * item.quantite, 0)
+})
+
+async function commander() {
+  loading.value = true
+  message.value = ''
+  erreur.value = ''
+  try {
+    const commande = {
+      username: localStorage.getItem('username'),
+      produits: panier.value,
+      total: totalPanier.value,
+    }
+    await commandeService.creerCommande(commande)
+    localStorage.removeItem('panier')
+    panier.value = []
+    message.value = 'Commande passée avec succès !'
+    setTimeout(() => router.push({ name: 'Shop' }), 2000)
+  } catch (err) {
+    erreur.value = 'Erreur lors de la commande. Veuillez réessayer.'
+  } finally {
+    loading.value = false
+  }
+}
+
+function augmenter(item) {
+  if (item.quantite >= item.quantiteDisponible) {
+    erreur.value = `Stock maximum atteint pour "${item.nom}" (${item.quantiteDisponible} disponible)`
+    return
+  }
+  erreur.value = ''
+  item.quantite += 1
+  sauvegarder()
+}
+
+function diminuer(item) {
+  erreur.value = ''
+  if (item.quantite > 1) {
+    item.quantite -= 1
+    sauvegarder()
+  } else {
+    supprimer(item.id)
+  }
+}
+
+function supprimer(id) {
+  panier.value = panier.value.filter((p) => p.id !== id)
+  sauvegarder()
+}
+
+function sauvegarder() {
+  localStorage.setItem('panier', JSON.stringify(panier.value))
+}
 </script>
+
 <template>
+  <!-- ✅ Topbar ajouté -->
   <UtilisateurTopbar />
-  <!-- Start Hero Section -->
-  <div class="hero">
+
+  <section class="panier-section">
     <div class="container">
-      <div class="row justify-content-between">
-        <div class="col-lg-5">
-          <div class="intro-excerpt">
-            <h1>Cart</h1>
-          </div>
-        </div>
-        <div class="col-lg-7"></div>
-      </div>
-    </div>
-  </div>
-  <!-- End Hero Section -->
-
-  <div class="untree_co-section">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-12 text-center pt-5">
-          <span class="display-3 thankyou-icon text-primary">
-            <svg
-              width="1em"
-              height="1em"
-              viewBox="0 0 16 16"
-              class="bi bi-cart-check mb-5"
-              fill="currentColor"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M11.354 5.646a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L8 8.293l2.646-2.647a.5.5 0 0 1 .708 0z"
-              />
-              <path
-                fill-rule="evenodd"
-                d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm7 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"
-              />
-            </svg>
-          </span>
-          <h2 class="display-3 text-black">Thank you!</h2>
-          <p class="lead mb-5">You order was successfuly completed.</p>
-          <p><a href="shop.html" class="btn btn-sm btn-outline-black">Back to shop</a></p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Start Footer Section -->
-  <footer class="footer-section">
-    <div class="container relative">
-      <div class="sofa-img">
-        <img src="/assets/images/sofa.png" alt="Image" class="img-fluid" />
+      <!-- En-tête page -->
+      <div class="panier-header">
+        <h1>🛒 Mon Panier</h1>
+        <p>Vérifiez vos articles avant de commander</p>
       </div>
 
-      <div class="row">
-        <div class="col-lg-8">
-          <div class="subscription-form">
-            <h3 class="d-flex align-items-center">
-              <span class="me-1"
-                ><img
-                  src="/assets/images/envelope-outline.svg"
-                  alt="Image"
-                  class="img-fluid" /></span
-              ><span>Subscribe to Newsletter</span>
-            </h3>
+      <!-- Alertes -->
+      <div v-if="message" class="alerte-succes">✅ {{ message }}</div>
+      <div v-if="erreur" class="alerte-erreur">⚠️ {{ erreur }}</div>
 
-            <form action="#" class="row g-3">
-              <div class="col-auto">
-                <input type="text" class="form-control" placeholder="Enter your name" />
-              </div>
-              <div class="col-auto">
-                <input type="email" class="form-control" placeholder="Enter your email" />
-              </div>
-              <div class="col-auto">
-                <button class="btn btn-primary">
-                  <span class="fa fa-paper-plane"></span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      <!-- Panier vide -->
+      <div v-if="panier.length === 0" class="panier-vide">
+        <div class="panier-vide-icone">🛍️</div>
+        <h3>Votre panier est vide</h3>
+        <p>Ajoutez des produits pour commencer vos achats</p>
+        <router-link :to="{ name: 'Shop' }" class="btn-continuer">
+          Continuer mes achats
+        </router-link>
       </div>
 
-      <div class="row g-5 mb-5">
-        <div class="col-lg-4">
-          <div class="mb-4 footer-logo-wrap">
-            <a href="#" class="footer-logo">Furni<span>.</span></a>
-          </div>
-          <p class="mb-4">
-            Donec facilisis quam ut purus rutrum lobortis. Donec vitae odio quis nisl dapibus
-            malesuada. Nullam ac aliquet velit. Aliquam vulputate velit imperdiet dolor tempor
-            tristique. Pellentesque habitant
-          </p>
+      <!-- Tableau panier -->
+      <div v-else class="panier-contenu">
+        <div class="table-wrap">
+          <table class="panier-table">
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Prix unitaire</th>
+                <th>Quantité</th>
+                <th>Sous-total</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in panier" :key="item.id">
+                <!-- Produit -->
+                <td>
+                  <div class="produit-cell">
+                    <img
+                      :src="
+                        item.imageUrl
+                          ? `http://localhost:8080${item.imageUrl}`
+                          : '/assets/images/product-1.png'
+                      "
+                      :alt="item.nom"
+                      class="produit-img"
+                    />
+                    <div>
+                      <span class="produit-nom">{{ item.nom }}</span>
+                      <small class="stock-info">
+                        Stock disponible : {{ item.quantiteDisponible }}
+                      </small>
+                    </div>
+                  </div>
+                </td>
 
-          <ul class="list-unstyled custom-social">
-            <li>
-              <a href="#"><span class="fa fa-brands fa-facebook-f"></span></a>
-            </li>
-            <li>
-              <a href="#"><span class="fa fa-brands fa-twitter"></span></a>
-            </li>
-            <li>
-              <a href="#"><span class="fa fa-brands fa-instagram"></span></a>
-            </li>
-            <li>
-              <a href="#"><span class="fa fa-brands fa-linkedin"></span></a>
-            </li>
-          </ul>
+                <!-- Prix unitaire -->
+                <td class="prix-cell">{{ formatPrix(item.prix) }}</td>
+
+                <!-- Quantité -->
+                <td>
+                  <div class="quantite-control">
+                    <button class="qty-btn" @click="diminuer(item)">−</button>
+                    <span class="qty-valeur">{{ item.quantite }}</span>
+                    <button
+                      class="qty-btn"
+                      @click="augmenter(item)"
+                      :disabled="item.quantite >= item.quantiteDisponible"
+                    >
+                      +
+                    </button>
+                  </div>
+                </td>
+
+                <!-- Sous-total -->
+                <td class="sous-total-cell">
+                  {{ formatPrix(item.prix * item.quantite) }}
+                </td>
+
+                <!-- ✅ Bouton supprimer rouge lisible -->
+                <td>
+                  <button class="btn-supprimer" @click="supprimer(item.id)">🗑️ Supprimer</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <div class="col-lg-8">
-          <div class="row links-wrap">
-            <div class="col-6 col-sm-6 col-md-3">
-              <ul class="list-unstyled">
-                <li><a href="#">About us</a></li>
-                <li><a href="#">Services</a></li>
-                <li><a href="#">Blog</a></li>
-                <li><a href="#">Contact us</a></li>
-              </ul>
+        <!-- Récapitulatif -->
+        <div class="panier-recap">
+          <router-link :to="{ name: 'Shop' }" class="btn-retour">
+            ← Continuer mes achats
+          </router-link>
+
+          <div class="recap-total">
+            <div class="total-ligne">
+              <span>Sous-total</span>
+              <span>{{ formatPrix(totalPanier) }}</span>
             </div>
-
-            <div class="col-6 col-sm-6 col-md-3">
-              <ul class="list-unstyled">
-                <li><a href="#">Support</a></li>
-                <li><a href="#">Knowledge base</a></li>
-                <li><a href="#">Live chat</a></li>
-              </ul>
+            <div class="total-ligne">
+              <span>Livraison</span>
+              <span class="gratuit">Gratuite</span>
             </div>
-
-            <div class="col-6 col-sm-6 col-md-3">
-              <ul class="list-unstyled">
-                <li><a href="#">Jobs</a></li>
-                <li><a href="#">Our team</a></li>
-                <li><a href="#">Leadership</a></li>
-                <li><a href="#">Privacy Policy</a></li>
-              </ul>
+            <div class="total-ligne total-final">
+              <span>Total</span>
+              <strong>{{ formatPrix(totalPanier) }}</strong>
             </div>
-
-            <div class="col-6 col-sm-6 col-md-3">
-              <ul class="list-unstyled">
-                <li><a href="#">Nordic Chair</a></li>
-                <li><a href="#">Kruzo Aero</a></li>
-                <li><a href="#">Ergonomic Chair</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="border-top copyright">
-        <div class="row pt-4">
-          <div class="col-lg-6">
-            <p class="mb-2 text-center text-lg-start">
-              Copyright &copy; {{ new Date().getFullYear() }}
-            </p>
-          </div>
-
-          <div class="col-lg-6 text-center text-lg-end">
-            <ul class="list-unstyled d-inline-flex ms-auto">
-              <li class="me-4"><a href="#">Terms &amp; Conditions</a></li>
-              <li><a href="#">Privacy Policy</a></li>
-            </ul>
+            <button class="btn-commander" @click="commander" :disabled="loading">
+              {{ loading ? '⏳ Commande en cours...' : '✅ Passer la commande' }}
+            </button>
           </div>
         </div>
       </div>
     </div>
-  </footer>
-  <!-- End Footer Section -->
+  </section>
 </template>
+
+<style scoped>
+/* ── Section ── */
+.panier-section {
+  background: #f4f6f9;
+  min-height: 100vh;
+  padding: 48px 0 80px;
+}
+
+/* ── En-tête ── */
+.panier-header {
+  margin-bottom: 32px;
+}
+.panier-header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+.panier-header p {
+  color: #6b7280;
+  font-size: 15px;
+}
+
+/* ── Alertes ── */
+.alerte-succes {
+  background: #d1fae5;
+  color: #065f46;
+  border-left: 4px solid #42b983;
+  padding: 14px 18px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+.alerte-erreur {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-left: 4px solid #ef4444;
+  padding: 14px 18px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+/* ── Panier vide ── */
+.panier-vide {
+  text-align: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+}
+.panier-vide-icone {
+  font-size: 56px;
+  margin-bottom: 16px;
+}
+.panier-vide h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+}
+.panier-vide p {
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+.btn-continuer {
+  display: inline-block;
+  background: #42b983;
+  color: white;
+  padding: 12px 28px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+.btn-continuer:hover {
+  background: #369f6e;
+}
+
+/* ── Table ── */
+.table-wrap {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  overflow-x: auto;
+  margin-bottom: 24px;
+}
+.panier-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.panier-table thead tr {
+  border-bottom: 2px solid #e5e7eb;
+}
+.panier-table th {
+  padding: 16px 20px;
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  font-weight: 700;
+}
+.panier-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+  color: #374151;
+}
+.panier-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.panier-table tbody tr:hover {
+  background: #fafafa;
+}
+
+/* ── Cellule produit ── */
+.produit-cell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.produit-img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+.produit-nom {
+  font-weight: 700;
+  color: #1a1a2e;
+  display: block;
+  margin-bottom: 4px;
+}
+.stock-info {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* ── Prix ── */
+.prix-cell {
+  font-weight: 600;
+  color: #374151;
+}
+.sous-total-cell {
+  font-weight: 800;
+  color: #42b983;
+  font-size: 15px;
+}
+
+/* ── Contrôle quantité ── */
+.quantite-control {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.qty-btn {
+  background: #f9fafb;
+  border: none;
+  padding: 6px 14px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.qty-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+.qty-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.qty-valeur {
+  padding: 6px 14px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1a1a2e;
+  min-width: 36px;
+  text-align: center;
+  border-left: 1.5px solid #e5e7eb;
+  border-right: 1.5px solid #e5e7eb;
+}
+
+/* ✅ Bouton supprimer — rouge lisible */
+.btn-supprimer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.15s;
+  white-space: nowrap;
+}
+.btn-supprimer:hover {
+  background: #dc2626;
+  transform: scale(1.04);
+}
+
+/* ── Récapitulatif ── */
+.panier-recap {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.btn-retour {
+  color: #42b983;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 14px;
+  padding-top: 8px;
+}
+.btn-retour:hover {
+  text-decoration: underline;
+}
+
+.recap-total {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  padding: 24px 28px;
+  min-width: 300px;
+}
+.total-ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 15px;
+  color: #374151;
+}
+.total-ligne:last-of-type {
+  border-bottom: none;
+}
+.gratuit {
+  color: #42b983;
+  font-weight: 600;
+}
+.total-final {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a2e;
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 2px solid #e5e7eb !important;
+}
+.total-final strong {
+  color: #42b983;
+  font-size: 20px;
+}
+
+.btn-commander {
+  width: 100%;
+  margin-top: 20px;
+  background: #42b983;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.15s;
+}
+.btn-commander:hover:not(:disabled) {
+  background: #369f6e;
+  transform: scale(1.02);
+}
+.btn-commander:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .panier-recap {
+    flex-direction: column;
+  }
+  .recap-total {
+    width: 100%;
+  }
+  .panier-table th:nth-child(2),
+  .panier-table td:nth-child(2) {
+    display: none;
+  }
+}
+</style>

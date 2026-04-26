@@ -69,5 +69,27 @@
         </div>
       </div>
     </li>
+
+    <!-- ← Ajouter ici — Commandes -->
+    <li class="nav-item">
+      <a
+        class="nav-link collapsed"
+        href="#"
+        data-toggle="collapse"
+        data-target="#collapseCommandes"
+        aria-expanded="false"
+        aria-controls="collapseCommandes"
+      >
+        <i class="fas fa-fw fa-shopping-cart"></i>
+        <span>Commandes</span>
+      </a>
+      <div id="collapseCommandes" class="collapse" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+          <router-link class="collapse-item" :to="{ name: 'ListeCommandes' }">
+            Liste commandes
+          </router-link>
+        </div>
+      </div>
+    </li>
   </ul>
 </template>

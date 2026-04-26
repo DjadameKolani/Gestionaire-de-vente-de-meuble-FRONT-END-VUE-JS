@@ -71,6 +71,14 @@
                   Connecté en tant que <strong>{{ username }}</strong>
                 </span>
               </li>
+              <!-- ← Mes commandes -->
+              <li>
+                <router-link class="dropdown-item" :to="{ name: 'HistoriqueCommandes' }">
+                  <i class="fa fa-history me-2"></i> Mes commandes
+                </router-link>
+              </li>
+              <li><hr class="dropdown-divider" /></li>
+
               <li><hr class="dropdown-divider" /></li>
               <li>
                 <a class="dropdown-item text-danger" href="#" @click.prevent="handleLogout">

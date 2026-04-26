@@ -4,137 +4,546 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const produit = ref({
-  nom: '',
-  description: '',
-  prix: 0,
-  quantite: 0,
-})
-
+const produit = ref({ nom: '', description: '', prix: 0, quantite: 0 })
 const image = ref<File | null>(null)
+const imagePreview = ref<string | null>(null)
 const message = ref('')
 const success = ref(false)
+const loading = ref(false)
 
 const handleFileUpload = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
     image.value = target.files[0]
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      imagePreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(target.files[0])
   }
 }
 
+const removeImage = () => {
+  image.value = null
+  imagePreview.value = null
+}
+
 const addProduit = async () => {
+  if (!image.value) {
+    message.value = 'Veuillez sélectionner une image'
+    success.value = false
+    return
+  }
+  loading.value = true
+  message.value = ''
   try {
     const token = localStorage.getItem('token')
-
-    // ✅ FormData pour envoyer image + données ensemble
     const formData = new FormData()
     formData.append('nom', produit.value.nom)
     formData.append('description', produit.value.description)
     formData.append('prix', String(produit.value.prix))
     formData.append('quantite', String(produit.value.quantite))
-    if (image.value) {
-      formData.append('image', image.value)
-    }
+    formData.append('image', image.value)
 
     const response = await fetch('http://localhost:8080/api/produits', {
       method: 'POST',
-      headers: {
-        // ✅ Ne pas mettre Content-Type manuellement avec FormData
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: formData,
     })
 
     if (response.ok) {
       success.value = true
       message.value = 'Produit ajouté avec succès !'
-      // ✅ Réinitialisation complète incluant image
       produit.value = { nom: '', description: '', prix: 0, quantite: 0 }
       image.value = null
-      // ✅ Redirection vers la liste après ajout
+      imagePreview.value = null
       setTimeout(() => router.push({ name: 'Listeproduit' }), 1500)
     } else {
+      const err = await response.json().catch(() => null)
       success.value = false
-      message.value = "Erreur lors de l'ajout du produit"
+      message.value = err?.message ?? "Erreur lors de l'ajout"
     }
-  } catch (error) {
+  } catch {
     success.value = false
     message.value = 'Erreur de connexion au serveur'
+  } finally {
+    loading.value = false
   }
 }
 </script>
 
 <template>
-  <div class="addProduit">
-    <h2>Ajouter un Produit</h2>
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div class="header-left">
+        <button class="back-btn" @click="router.push({ name: 'Listeproduit' })">← Retour</button>
+        <div>
+          <h1 class="page-title">Ajouter un produit</h1>
+          <p class="page-sub">Remplissez les informations du nouveau produit</p>
+        </div>
+      </div>
+    </div>
 
-    <form @submit.prevent="addProduit">
-      <div>
-        <label>Nom du produit</label>
-        <input v-model="produit.nom" type="text" placeholder="Nom du produit" required />
-      </div>
-      <div>
-        <label>Description</label>
-        <textarea v-model="produit.description" placeholder="Description" required></textarea>
-      </div>
-      <div>
-        <label>Prix</label>
-        <input v-model="produit.prix" type="number" placeholder="Prix" required />
-      </div>
-      <div>
-        <label>Quantité</label>
-        <input v-model="produit.quantite" type="number" placeholder="Quantité" required />
-      </div>
-      <div>
-        <label>Image</label>
-        <input type="file" @change="handleFileUpload" accept="image/*" />
-      </div>
-      <button type="submit">Ajouter</button>
-    </form>
+    <div class="form-card">
+      <form @submit.prevent="addProduit">
+        <div class="two-col">
+          <!-- Colonne gauche -->
+          <div class="col-main">
+            <div class="section-block">
+              <h2 class="section-title">Informations générales</h2>
 
-    <p v-if="message" :class="success ? 'success' : 'error'">{{ message }}</p>
+              <div class="field-group">
+                <label>Nom du produit</label>
+                <input
+                  v-model="produit.nom"
+                  type="text"
+                  placeholder="Ex : Chaise scandinave..."
+                  required
+                />
+              </div>
+
+              <div class="field-group">
+                <label>Description</label>
+                <textarea
+                  v-model="produit.description"
+                  placeholder="Décrivez le produit en détail..."
+                  rows="5"
+                  required
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <h2 class="section-title">Prix et stock</h2>
+              <div class="field-row">
+                <div class="field-group">
+                  <label>Prix (FCFA)</label>
+                  <div class="input-prefix-wrap">
+                    <span class="prefix">₣</span>
+                    <input v-model="produit.prix" type="number" min="0" placeholder="0" required />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Quantité en stock</label>
+                  <div class="input-prefix-wrap">
+                    <span class="prefix">📦</span>
+                    <input
+                      v-model="produit.quantite"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Colonne droite : image -->
+          <div class="col-side">
+            <div class="section-block">
+              <h2 class="section-title">Image du produit</h2>
+
+              <div class="image-box">
+                <img v-if="imagePreview" :src="imagePreview" alt="Aperçu" class="preview-img" />
+                <div v-else class="no-image">
+                  <span class="no-image-icon">🖼️</span>
+                  <p>Aucune image sélectionnée</p>
+                </div>
+                <button v-if="imagePreview" type="button" class="remove-btn" @click="removeImage">
+                  ✕
+                </button>
+              </div>
+
+              <div v-if="imagePreview" class="current-badge new-badge">
+                🆕 Image prête à l'envoi
+              </div>
+
+              <label class="upload-zone" for="file-add">
+                <span class="upload-icon">📁</span>
+                <span class="upload-text">
+                  {{ imagePreview ? "Changer l'image" : 'Choisir une image' }}
+                </span>
+                <span class="upload-hint">JPG, PNG, WEBP · Max 5Mo</span>
+                <input
+                  id="file-add"
+                  type="file"
+                  accept="image/*"
+                  class="hidden-input"
+                  @change="handleFileUpload"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message -->
+        <div v-if="message" :class="['alert-msg', success ? 'alert-success' : 'alert-error']">
+          {{ success ? '✅' : '❌' }} {{ message }}
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" @click="router.push({ name: 'Listeproduit' })">
+            Annuler
+          </button>
+          <button type="submit" class="btn-save" :disabled="loading">
+            <span v-if="loading" class="btn-spin"></span>
+            <span v-else>➕ Ajouter le produit</span>
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.addProduit {
-  padding: 20px;
-  max-width: 500px;
-  margin: 0 auto;
+/* Identique à editProduit — même design */
+.page-wrapper {
+  background: #f4f6f9;
+  min-height: 100vh;
+  padding: 32px;
+  font-family: 'Segoe UI', sans-serif;
 }
-form div {
-  margin-bottom: 15px;
+.page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28px;
 }
-label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
-input,
-textarea {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-button {
-  background-color: #42b983;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
+.back-btn {
+  padding: 8px 16px;
+  background: white;
+  border: 1.5px solid #dde3ef;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.back-btn:hover {
+  background: #f0f4f8;
+  border-color: #42b983;
+  color: #42b983;
+}
+.page-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin: 0;
+}
+.page-sub {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 2px 0 0;
+}
+
+.form-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  padding: 32px;
+}
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 28px;
+  margin-bottom: 24px;
+}
+.col-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.col-side {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-block {
+  background: #fafbfc;
+  border: 1.5px solid #edf0f7;
+  border-radius: 12px;
+  padding: 20px;
+}
+.section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #42b983;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e8f5ee;
+}
+
+.field-group {
+  margin-bottom: 16px;
+}
+.field-group:last-child {
+  margin-bottom: 0;
+}
+.field-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 6px;
+}
+.field-group input,
+.field-group textarea {
   width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #dde3ef;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a1a2e;
+  background: white;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
-button:hover {
-  background-color: #369f6e;
+.field-group input:focus,
+.field-group textarea:focus {
+  outline: none;
+  border-color: #42b983;
+  box-shadow: 0 0 0 3px rgba(66, 185, 131, 0.12);
 }
-.success {
-  color: green;
-  margin-top: 10px;
+.field-group textarea {
+  resize: vertical;
 }
-.error {
-  color: red;
-  margin-top: 10px;
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.input-prefix-wrap {
+  position: relative;
+}
+.prefix {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+.input-prefix-wrap input {
+  padding-left: 34px !important;
+}
+
+.image-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #f0f4f8;
+  border: 2px dashed #dde3ef;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+.image-box:hover {
+  border-color: #42b983;
+}
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.no-image {
+  text-align: center;
+  color: #9ca3af;
+}
+.no-image-icon {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 6px;
+}
+.no-image p {
+  font-size: 13px;
+  margin: 0;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  transition:
+    background 0.2s,
+    transform 0.15s;
+}
+.remove-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.current-badge {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 5px 10px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.new-badge {
+  color: #1e40af;
+  background: #dbeafe;
+}
+
+.upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px;
+  background: #f0f9f4;
+  border: 2px dashed #42b983;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: center;
+}
+.upload-zone:hover {
+  background: #e0f4ec;
+}
+.upload-icon {
+  font-size: 22px;
+}
+.upload-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #42b983;
+}
+.upload-hint {
+  font-size: 11px;
+  color: #9ca3af;
+}
+.hidden-input {
+  display: none;
+}
+
+.alert-msg {
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.alert-success {
+  background: #d1fae5;
+  color: #065f46;
+  border-left: 4px solid #42b983;
+}
+.alert-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-left: 4px solid #ef4444;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1.5px solid #f0f4f8;
+}
+.btn-cancel {
+  padding: 10px 24px;
+  background: #f5f6fa;
+  border: 1.5px solid #dde3ef;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+  transition: all 0.2s;
+}
+.btn-cancel:hover {
+  background: #e2e8f0;
+}
+.btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 28px;
+  background: #42b983;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition:
+    background 0.2s,
+    transform 0.15s;
+}
+.btn-save:hover:not(:disabled) {
+  background: #369f6e;
+  transform: scale(1.02);
+}
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-spin {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-wrapper {
+    padding: 16px;
+  }
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+  .form-actions {
+    flex-direction: column;
+  }
+  .btn-save,
+  .btn-cancel {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

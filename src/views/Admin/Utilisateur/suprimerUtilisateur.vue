@@ -49,7 +49,6 @@
 
 <script>
 import { useUserStore } from '../stores/userStore'
-import StatusBadge from '../components/StatusBadge.vue'
 
 export default {
   components: { StatusBadge },
